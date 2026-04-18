@@ -1,6 +1,7 @@
 from load_and_explore_dataset import load_and_inspect_data
 from date_info_generation import create_bd_date_features
 from pre_processing import fit_transform_preprocess, transform_preprocess
+from light_gbm import train_lightgbm, get_feature_importance
 
 
 def time_based_split(df, date_col="date", train_ratio=0.8):
@@ -34,12 +35,12 @@ def main():
     print("Original shape:", df.shape)
 
     # =========================
-    # Step 2: Sort + Split (IMPORTANT: BEFORE FEATURE ENGINEERING)
+    # Step 2: Time-based split
     # =========================
     train_df, test_df = time_based_split(df, date_col="date")
 
     # =========================
-    # Step 3: Feature Engineering (separately applied)
+    # Step 3: Feature Engineering
     # =========================
     train_df = create_bd_date_features(train_df, date_col="date")
     test_df = create_bd_date_features(test_df, date_col="date")
@@ -49,25 +50,33 @@ def main():
     print("Test shape:", test_df.shape)
 
     # =========================
-    # Step 4: Preprocessing (FIT on train, TRANSFORM on test)
+    # Step 4: Preprocessing
     # =========================
     train_df, scaler = fit_transform_preprocess(train_df, show_heatmap=True)
     test_df = transform_preprocess(test_df, scaler)
 
-    print("\n✅ Preprocessing completed successfully")
+    print("\n✅ Preprocessing completed")
     print("Final train shape:", train_df.shape)
     print("Final test shape:", test_df.shape)
 
     # =========================
-    # Step 5: Drop date safely AFTER all processing
+    # Step 5: Drop date
     # =========================
     train_df = train_df.drop(columns=["date"])
     test_df = test_df.drop(columns=["date"])
 
-    print("\n📊 Ready for model training!")
+    # =========================
+    # Step 6: Model Training
+    # =========================
+    model, preds, metrics = train_lightgbm(train_df, test_df)
 
-    print("\nTrain columns sample:")
-    print(train_df.columns.tolist()[-10:])
+    # =========================
+    # Step 7: Feature Importance
+    # =========================
+    X_train = train_df.drop(columns=["total_txn"])
+    importance_df = get_feature_importance(model, X_train.columns)
+
+    print("\n📊 Pipeline completed successfully!")
 
 
 if __name__ == "__main__":
