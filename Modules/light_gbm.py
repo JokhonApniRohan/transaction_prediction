@@ -7,7 +7,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 # -----------------------------
 # TRAIN LIGHTGBM MODEL
 # -----------------------------
-def train_lightgbm(train_df: pd.DataFrame, test_df: pd.DataFrame, target_col: str = "total_txn"):
+def train_lightgbm(train_df: pd.DataFrame, test_df: pd.DataFrame, target_col: str = "total_txn_nextday"):
     """
     Train LightGBM model and evaluate on test data.
 
@@ -100,6 +100,6 @@ def get_feature_importance(model, feature_names):
     }).sort_values(by="importance", ascending=False)
 
     print("\n🔥 TOP FEATURE IMPORTANCE:")
-    print(importance_df.head(10))
+    print(importance_df.head(20))
 
     return importance_df
