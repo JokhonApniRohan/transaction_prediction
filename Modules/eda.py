@@ -2,39 +2,15 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+import shap
 
 
 # -----------------------------
-# BASIC INFO
+# BASIC INFO (KEEP MINIMAL)
 # -----------------------------
 def basic_info(df: pd.DataFrame):
     print("\n📌 SHAPE:", df.shape)
-    print("\n📌 DATA TYPES:\n", df.dtypes)
     print("\n📌 MISSING VALUES:\n", df.isnull().sum())
-    print("\n📌 DESCRIBE:\n", df.describe())
-
-
-# -----------------------------
-# TARGET DISTRIBUTION
-# -----------------------------
-def plot_target_distribution(df: pd.DataFrame, target_col: str):
-    plt.figure(figsize=(8, 5))
-    sns.histplot(df[target_col], kde=True)
-    plt.title(f"Distribution of {target_col}")
-    plt.show()
-
-
-# -----------------------------
-# FEATURE DISTRIBUTIONS
-# -----------------------------
-def plot_feature_distributions(df: pd.DataFrame):
-    numeric_cols = df.select_dtypes(include=np.number).columns
-
-    for col in numeric_cols:
-        plt.figure(figsize=(6, 4))
-        sns.histplot(df[col], kde=True)
-        plt.title(f"{col} Distribution")
-        plt.show()
 
 
 # -----------------------------
@@ -43,54 +19,85 @@ def plot_feature_distributions(df: pd.DataFrame):
 def plot_correlation_heatmap(df: pd.DataFrame, target_col: str = None):
     df = df.copy()
 
+    df = df.select_dtypes(include=np.number)
+
     if target_col and target_col in df.columns:
         cols = [c for c in df.columns if c != target_col] + [target_col]
         df = df[cols]
 
-    corr = df.corr(numeric_only=True)
+    corr = df.corr()
 
     plt.figure(figsize=(14, 10))
     sns.heatmap(corr, cmap="coolwarm", center=0, linewidths=0.5)
     plt.title("Correlation Heatmap")
     plt.show()
 
-
-# -----------------------------
-# LAG RELATIONSHIP
-# -----------------------------
-def plot_lag_relationship(df: pd.DataFrame, target_col: str, lag_col: str):
-    plt.figure(figsize=(6, 5))
-    sns.scatterplot(x=df[lag_col], y=df[target_col])
-    plt.title(f"{lag_col} vs {target_col}")
-    plt.show()
+    return corr
 
 
 # -----------------------------
-# BOXPLOT (OUTLIERS)
+# UNIQUE PAIRWISE CORRELATION
 # -----------------------------
-def plot_boxplots(df: pd.DataFrame):
-    numeric_cols = df.select_dtypes(include=np.number).columns
+def print_unique_correlations(df: pd.DataFrame, threshold: float = 0.0):
+    """
+    Prints each feature-pair correlation ONLY ONCE (no duplicates)
+    """
 
-    for col in numeric_cols:
-        plt.figure(figsize=(6, 4))
-        sns.boxplot(x=df[col])
-        plt.title(f"{col} Boxplot")
-        plt.show()
+    # df = df.select_dtypes(include=np.number)
+    # corr = df.corr()
+
+    # printed_pairs = set()
+
+    # print("\n📊 UNIQUE FEATURE CORRELATIONS:\n")
+
+    # for i in range(len(corr.columns)):
+    #     for j in range(i + 1, len(corr.columns)):  # ensures no duplicates
+    #         f1 = corr.columns[i]
+    #         f2 = corr.columns[j]
+    #         value = corr.iloc[i, j]
+
+    #         if abs(value) >= threshold:
+    #             print(f"{f1} ↔ {f2} : {value:.4f}")
+    #             printed_pairs.add((f1, f2))
 
 
 # -----------------------------
-# FULL EDA PIPELINE
+# SHAP VALUES (LIGHTGBM)
 # -----------------------------
-def run_full_eda(df: pd.DataFrame, target_col: str, date_col: str = None):
+def plot_shap_values(model, X: pd.DataFrame):
+    """
+    SHAP explanation for feature importance
+    """
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X)
+
+    print("\n📊 Generating SHAP summary plot...")
+
+    shap.summary_plot(shap_values, X)
+
+
+# -----------------------------
+# FULL EDA PIPELINE (FOCUSED)
+# -----------------------------
+def run_full_eda(
+    df: pd.DataFrame,
+    target_col: str,
+    model=None,
+    shap_data: pd.DataFrame = None
+):
+    """
+    Focused EDA for ML feature selection
+    """
+
     basic_info(df)
 
-    plot_target_distribution(df, target_col)
-    plot_feature_distributions(df)
-    plot_correlation_heatmap(df, target_col)
+    # Correlation heatmap
+    corr = plot_correlation_heatmap(df, target_col)
 
-    # Example lag checks (if exist)
-    for lag in ["lag_1", "lag_7", "lag_30"]:
-        if lag in df.columns:
-            plot_lag_relationship(df, target_col, lag)
+    # Unique correlations
+    print_unique_correlations(df, threshold=0.0)
 
-    plot_boxplots(df)
+    # SHAP (only if model provided)
+    if model is not None and shap_data is not None:
+        plot_shap_values(model, shap_data)

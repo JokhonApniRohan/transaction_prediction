@@ -6,14 +6,17 @@ from sklearn.preprocessing import StandardScaler
 # -----------------------------
 # CONFIG
 # -----------------------------
-LOG_COLS = [
+FEATURE_COLS = [
     "txn_count",
     "count_camp",
     "lag_1",
     "lag_7",
     "lag_30",
     "rolling_7",
-    "rolling_30"
+    "rolling_30",
+    "diff_1",
+    "trend_7",
+    "growth_7"
 ]
 
 
@@ -21,15 +24,10 @@ LOG_COLS = [
 # FIT TRANSFORM (TRAINING)
 # -----------------------------
 def fit_transform_preprocess(df: pd.DataFrame):
-    """
-    Fit preprocessing pipeline on training data.
-    Returns processed dataframe + fitted scaler.
-    """
-
     df = _preprocess(df)
 
     scaler = StandardScaler()
-    df[LOG_COLS] = scaler.fit_transform(df[LOG_COLS])
+    df[FEATURE_COLS] = scaler.fit_transform(df[FEATURE_COLS])
 
     return df, scaler
 
@@ -38,12 +36,9 @@ def fit_transform_preprocess(df: pd.DataFrame):
 # TRANSFORM (TEST / INFERENCE)
 # -----------------------------
 def transform_preprocess(df: pd.DataFrame, scaler: StandardScaler):
-    """
-    Apply preprocessing using fitted scaler.
-    """
-
     df = _preprocess(df)
-    df[LOG_COLS] = scaler.transform(df[LOG_COLS])
+
+    df[FEATURE_COLS] = scaler.transform(df[FEATURE_COLS])
 
     return df
 
@@ -54,12 +49,42 @@ def transform_preprocess(df: pd.DataFrame, scaler: StandardScaler):
 def _preprocess(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
-    # Log transform skewed features
-    for col in LOG_COLS:
+    # =====================================================
+    # 1. TREND FEATURES (RAW SPACE)
+    # =====================================================
+
+    # Short-term trend
+    df["diff_1"] = df["lag_1"] - df.get("lag_2", df["lag_1"])
+
+    # Weekly trend
+    df["trend_7"] = df["lag_1"] - df["lag_7"]
+
+    # Growth rate (SAFE VERSION)
+    df["growth_7"] = (
+        (df["lag_1"] - df["lag_7"]) /
+        (np.abs(df["lag_7"]) + 1)
+    )
+
+    # =====================================================
+    # 2. LOG TRANSFORM SKEWED FEATURES
+    # =====================================================
+    log_cols = [
+        "txn_count",
+        "count_camp",
+        "lag_1",
+        "lag_7",
+        "lag_30",
+        "rolling_7",
+        "rolling_30"
+    ]
+
+    for col in log_cols:
         if col in df.columns:
             df[col] = np.log1p(df[col])
 
-    # Handle missing values
+    # =====================================================
+    # 3. MISSING VALUE HANDLING
+    # =====================================================
     df = df.fillna(-1)
 
     return df

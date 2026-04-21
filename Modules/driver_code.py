@@ -2,6 +2,8 @@ from load_and_explore_dataset import load_and_inspect_data
 from date_info_generation import create_bd_date_features
 from pre_processing import fit_transform_preprocess, transform_preprocess
 from light_gbm import train_lightgbm, get_feature_importance
+from xgboost_model import train_xgboost, get_xgb_feature_importance
+from catboost_model import train_catboost, get_catboost_feature_importance
 from eda import run_full_eda
 
 
@@ -28,9 +30,6 @@ def time_based_split(df, date_col="date", train_ratio=0.8):
 # -----------------------------
 def main():
 
-    # =========================
-    # Step 1: Load dataset
-    # =========================
     file_path = r"D:\Projects\Transaction Prediction\Datasets\new_transaction_data.csv"
     df = load_and_inspect_data(file_path)
 
@@ -41,59 +40,84 @@ def main():
     print("\n✅ Dataset loaded successfully")
     print("Original shape:", df.shape)
 
-    # =========================
-    # 🔥 Step 1.5: RAW EDA
-    # =========================
-    print("\n📊 Running RAW EDA...")
-    run_full_eda(df, target_col="total_txn_nextday", date_col="date")
+    target_col = "total_txn_nextday"
 
-    # =========================
-    # Step 2: Time-based split
-    # =========================
+    # RAW EDA
+    print("\n📊 Running RAW EDA...")
+    run_full_eda(df, target_col=target_col)
+
+    # SPLIT
     train_df, test_df = time_based_split(df, date_col="date")
 
-    # =========================
-    # Step 3: Feature Engineering
-    # =========================
+    # FEATURE ENGINEERING
     train_df = create_bd_date_features(train_df, date_col="date")
     test_df = create_bd_date_features(test_df, date_col="date")
 
     print("\n✅ Feature engineering completed")
-    print("Train shape:", train_df.shape)
-    print("Test shape:", test_df.shape)
 
-    # =========================
-    # 🔥 Step 3.5: POST-FEATURE EDA (OPTIONAL)
-    # =========================
-    print("\n📊 Running FEATURE-LEVEL EDA...")
-    run_full_eda(train_df, target_col="total_txn_nextday", date_col="date")
+    # FEATURE EDA
+    print("\n📊 Running FEATURE EDA...")
+    run_full_eda(train_df, target_col=target_col)
 
-    # =========================
-    # Step 4: Preprocessing
-    # =========================
+    # PREPROCESSING
     train_df, scaler = fit_transform_preprocess(train_df)
     test_df = transform_preprocess(test_df, scaler)
 
     print("\n✅ Preprocessing completed")
-    print("Final train shape:", train_df.shape)
-    print("Final test shape:", test_df.shape)
+
+    # DROP DATE for ML models
+    train_df_ml = train_df.drop(columns=["date"])
+    test_df_ml = test_df.drop(columns=["date"])
 
     # =========================
-    # Step 5: Drop date
+    # TRAIN ML MODELS
     # =========================
-    train_df = train_df.drop(columns=["date"])
-    test_df = test_df.drop(columns=["date"])
+    print("\n🚀 Training LightGBM...")
+    lgb_model, lgb_preds, lgb_metrics = train_lightgbm(train_df_ml, test_df_ml)
+
+    print("\n🚀 Training XGBoost...")
+    xgb_model, xgb_preds, xgb_metrics = train_xgboost(train_df_ml, test_df_ml)
+
+    print("\n🚀 Training CatBoost...")
+    cat_model, cat_preds, cat_metrics = train_catboost(train_df_ml, test_df_ml)
 
     # =========================
-    # Step 6: Model Training
+    # MODEL COMPARISON
     # =========================
-    model, preds, metrics = train_lightgbm(train_df, test_df)
+    print("\n📊 MODEL COMPARISON")
+
+    print("\nLightGBM:", lgb_metrics)
+    print("XGBoost:", xgb_metrics)
+    print("CatBoost:", cat_metrics)
+
+    models = {
+        "LightGBM": (lgb_model, lgb_metrics, get_feature_importance),
+        "XGBoost": (xgb_model, xgb_metrics, get_xgb_feature_importance),
+        "CatBoost": (cat_model, cat_metrics, get_catboost_feature_importance),
+    }
+
+    best_name = min(models, key=lambda x: models[x][1]["RMSE"])
+    best_model, best_metrics, importance_fn = models[best_name]
+
+    print(f"\n🏆 Best ML Model: {best_name}")
 
     # =========================
-    # Step 7: Feature Importance
+    # SHAP ANALYSIS
     # =========================
-    X_train = train_df.drop(columns=["total_txn_nextday"])
-    importance_df = get_feature_importance(model, X_train.columns)
+    print("\n📊 Running SHAP analysis...")
+
+    X_train = train_df_ml.drop(columns=[target_col])
+    X_sample = X_train.sample(min(2000, len(X_train)), random_state=42)
+
+    run_full_eda(
+        train_df_ml,
+        target_col=target_col,
+        model=best_model,
+        shap_data=X_sample
+    )
+
+    # FEATURE IMPORTANCE
+    importance_df = importance_fn(best_model, X_train.columns)
 
     print("\n📊 Pipeline completed successfully!")
 
