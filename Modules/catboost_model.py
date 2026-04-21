@@ -1,84 +1,58 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 from catboost import CatBoostRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 
+USE_LOG_TRANSFORM = True
+
+
 # -----------------------------
-# TRAIN CATBOOST MODEL
+# TRAIN CATBOOST
 # -----------------------------
-def train_catboost(train_df: pd.DataFrame,
-                   test_df: pd.DataFrame,
-                   target_col: str = "total_txn_nextday"):
-    """
-    Train CatBoost model and evaluate performance
-    """
+def train_catboost(X_train, y_train, X_test, y_test):
 
-    # -----------------------------
-    # SPLIT FEATURES & TARGET
-    # -----------------------------
-    X_train = train_df.drop(columns=[target_col])
-    y_train = train_df[target_col]
-
-    X_test = test_df.drop(columns=[target_col])
-    y_test = test_df[target_col]
-
-    # -----------------------------
-    # MODEL
-    # -----------------------------
     model = CatBoostRegressor(
-        iterations=1000,
-        learning_rate=0.05,
+        iterations=1200,
+        learning_rate=0.03,
         depth=8,
         loss_function="RMSE",
         random_seed=42,
         verbose=200
     )
 
-    # -----------------------------
-    # TRAIN
-    # -----------------------------
     model.fit(X_train, y_train)
 
-    # -----------------------------
-    # PREDICT
-    # -----------------------------
-    preds = model.predict(X_test)
+    y_pred = model.predict(X_test)
 
     # -----------------------------
-    # METRICS
+    # SAFE INVERSE TRANSFORM
     # -----------------------------
-    mae = mean_absolute_error(y_test, preds)
-    rmse = np.sqrt(mean_squared_error(y_test, preds))
-    r2 = r2_score(y_test, preds)
-    mape = np.mean(np.abs((y_test - preds) / (y_test + 1e-9))) * 100
+    if USE_LOG_TRANSFORM:
+        y_test_orig = (y_test)
+        y_pred_orig = (y_pred)
+    else:
+        y_test_orig = y_test
+        y_pred_orig = y_pred
 
     metrics = {
-        "MAE": mae,
-        "RMSE": rmse,
-        "R2": r2,
-        "MAPE": mape
+        "MAE": mean_absolute_error(y_test_orig, y_pred_orig),
+        "RMSE": np.sqrt(mean_squared_error(y_test_orig, y_pred_orig)),
+        "R2": r2_score(y_test_orig, y_pred_orig),
+        "MAPE": np.mean(np.abs((y_test_orig - y_pred_orig) /
+                              (y_test_orig + 1e-9))) * 100
     }
 
-    # -----------------------------
-    # PRINT RESULTS
-    # -----------------------------
     print("\n📊 CATBOOST PERFORMANCE")
-    print(f"MAE  : {mae:.4f}")
-    print(f"RMSE : {rmse:.4f}")
-    print(f"R²   : {r2:.4f}")
-    print(f"MAPE : {mape:.2f}%")
+    print(metrics)
 
-    return model, preds, metrics
+    return model, y_pred_orig, metrics
 
 
 # -----------------------------
 # FEATURE IMPORTANCE
 # -----------------------------
 def get_catboost_feature_importance(model, feature_names):
-    """
-    Get feature importance from CatBoost
-    """
 
     importance = model.get_feature_importance()
 

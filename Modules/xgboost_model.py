@@ -1,30 +1,17 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 from xgboost import XGBRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 
 # -----------------------------
-# TRAIN XGBOOST MODEL
+# TRAIN XGBOOST
 # -----------------------------
-def train_xgboost(train_df: pd.DataFrame, test_df: pd.DataFrame, target_col: str = "total_txn_nextday"):
-    """
-    Train XGBoost model and evaluate performance
-    """
+def train_xgboost(X_train, y_train, X_test, y_test):
 
-    # Split features & target
-    X_train = train_df.drop(columns=[target_col])
-    y_train = train_df[target_col]
-
-    X_test = test_df.drop(columns=[target_col])
-    y_test = test_df[target_col]
-
-    # -----------------------------
-    # MODEL
-    # -----------------------------
     model = XGBRegressor(
-        n_estimators=500,
-        learning_rate=0.05,
+        n_estimators=700,
+        learning_rate=0.03,
         max_depth=6,
         subsample=0.8,
         colsample_bytree=0.8,
@@ -32,21 +19,29 @@ def train_xgboost(train_df: pd.DataFrame, test_df: pd.DataFrame, target_col: str
         n_jobs=-1
     )
 
-    # Train
     model.fit(X_train, y_train)
 
-    # Predict
-    preds = model.predict(X_test)
+    # -----------------------------
+    # PREDICT
+    # -----------------------------
+    y_pred = model.predict(X_test)
+
+    # -----------------------------
+    # NO TRANSFORM (RAW SCALE)
+    # -----------------------------
+    y_test_orig = y_test.values if hasattr(y_test, "values") else y_test
+    y_pred_orig = y_pred
 
     # -----------------------------
     # METRICS
     # -----------------------------
-    mae = mean_absolute_error(y_test, preds)
-    rmse = np.sqrt(mean_squared_error(y_test, preds))
-    r2 = r2_score(y_test, preds)
+    mae = mean_absolute_error(y_test_orig, y_pred_orig)
+    rmse = np.sqrt(mean_squared_error(y_test_orig, y_pred_orig))
+    r2 = r2_score(y_test_orig, y_pred_orig)
 
-    # Avoid division by zero in MAPE
-    mape = np.mean(np.abs((y_test - preds) / (y_test + 1e-9))) * 100
+    epsilon = 1e-9
+    mape = np.mean(np.abs((y_test_orig - y_pred_orig) /
+                          (y_test_orig + epsilon))) * 100
 
     metrics = {
         "MAE": mae,
@@ -55,29 +50,29 @@ def train_xgboost(train_df: pd.DataFrame, test_df: pd.DataFrame, target_col: str
         "MAPE": mape
     }
 
-    # Print results
-    print("\n📊 XGBOOST PERFORMANCE")
+    # -----------------------------
+    # CLEAN PRINT
+    # -----------------------------
+    print("\n" + "=" * 50)
+    print("📊 XGBOOST PERFORMANCE (RAW SCALE)")
+    print("=" * 50)
     print(f"MAE  : {mae:.4f}")
     print(f"RMSE : {rmse:.4f}")
     print(f"R²   : {r2:.4f}")
     print(f"MAPE : {mape:.2f}%")
+    print("=" * 50)
 
-    return model, preds, metrics
+    return model, y_pred_orig, metrics
 
 
 # -----------------------------
 # FEATURE IMPORTANCE
 # -----------------------------
 def get_xgb_feature_importance(model, feature_names):
-    """
-    Get feature importance from XGBoost
-    """
-
-    importance = model.feature_importances_
 
     importance_df = pd.DataFrame({
         "feature": feature_names,
-        "importance": importance
+        "importance": model.feature_importances_
     }).sort_values(by="importance", ascending=False)
 
     print("\n🔥 XGBOOST FEATURE IMPORTANCE:")
