@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from pathlib import Path
+import joblib
 
 from load_and_explore_dataset import load_and_inspect_data
 from feature_engineering import create_bd_date_features
@@ -8,6 +10,14 @@ from pre_processing import fit_transform_preprocess, transform_preprocess
 from light_gbm import train_lightgbm, get_feature_importance
 from xgboost_model import train_xgboost, get_xgb_feature_importance
 from catboost_model import train_catboost, get_catboost_feature_importance
+
+
+# =====================================================
+# PROJECT PATH (PORTABLE)
+# =====================================================
+BASE_DIR = Path(__file__).resolve().parent.parent
+MODEL_DIR = BASE_DIR / "Modules"
+MODEL_DIR.mkdir(exist_ok=True)
 
 
 # -----------------------------
@@ -24,7 +34,7 @@ def time_based_split(df, date_col="date", train_ratio=0.8):
 # -----------------------------
 def main():
 
-    file_path = r"D:\Projects\Transaction Prediction\Datasets\new_transaction_data.csv"
+    file_path = BASE_DIR / "Datasets" / "new_transaction_data.csv"
     df = load_and_inspect_data(file_path)
 
     if df is None:
@@ -34,18 +44,41 @@ def main():
     print("\n✅ Dataset loaded successfully")
 
     # =========================
-    # TARGET SETUP (CORRECT)
+    # TARGET
     # =========================
     raw_target = "total_txn_nextday"
     model_target = "target"
-
-    # 🔥 FIX: use next-day value directly (NOT delta)
-    df[model_target] = (df[raw_target])
 
     # =========================
     # SPLIT FIRST (NO LEAKAGE)
     # =========================
     train_df, test_df = time_based_split(df, "date")
+
+    # =========================
+    # 📊 OUTLIER HANDLING (TRAIN ONLY)
+    # =========================
+    print("\n📊 IQR OUTLIER HANDLING")
+
+    Q1 = train_df[raw_target].quantile(0.25)
+    Q3 = train_df[raw_target].quantile(0.75)
+    IQR = Q3 - Q1
+
+    lower_bound = Q1 - 1.5 * IQR
+    upper_bound = Q3 + 1.5 * IQR
+
+    print(f"Lower bound: {lower_bound}")
+    print(f"Upper bound: {upper_bound}")
+
+    train_df[raw_target] = train_df[raw_target].clip(lower_bound, upper_bound)
+    test_df[raw_target] = test_df[raw_target].clip(lower_bound, upper_bound)
+
+    print("✅ Outliers clipped using IQR")
+
+    # =========================
+    # TARGET COLUMN
+    # =========================
+    train_df[model_target] = train_df[raw_target]
+    test_df[model_target] = test_df[raw_target]
 
     # =========================
     # FEATURE ENGINEERING
@@ -92,9 +125,6 @@ def main():
         feature_cols
     )
 
-    # =========================
-    # SAFETY CHECK
-    # =========================
     assert list(X_train.columns) == list(X_test.columns), "Feature mismatch!"
 
     # =========================
@@ -128,20 +158,34 @@ def main():
 
     print(f"\n🏆 Best Model: {best_name}")
 
+    # =========================
+    # SAVE MODEL (PORTABLE)
+    # =========================
+    model_path = "./Model/best_model.pkl"
+
+    joblib.dump({
+        "model": best_model,
+        "features": list(X_train.columns),
+        "metrics": best_metrics,
+        "scaler": scaler
+    }, model_path)
+
+    print(f"\n💾 Model saved at: {model_path}")
+
     importance_df = importance_fn(best_model, X_train.columns)
 
     # =========================
-    # 📊 DISTRIBUTION CHECK
+    # PLOT
     # =========================
     plt.figure(figsize=(12, 5))
 
     plt.subplot(1, 2, 1)
-    plt.hist(np.expm1(y_train), bins=50)
-    plt.title("Original Target")
+    plt.hist(y_train, bins=50)
+    plt.title("Target Distribution (Train)")
 
     plt.subplot(1, 2, 2)
-    plt.hist(np.expm1(lgb_preds), bins=50)
-    plt.title("Predictions")
+    plt.hist(lgb_preds, bins=50)
+    plt.title("Predictions (LightGBM)")
 
     plt.show()
 

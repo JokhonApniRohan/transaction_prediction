@@ -71,15 +71,22 @@ def create_bd_date_features(
     # =====================================================
     if base_series is not None:
 
-        # =====================
-        # 🔥 DELTA TARGET (NEW)
-        # =====================
-        df["delta"] = base_series - base_series.shift(1)
+        shifted = base_series.shift(1)
 
         # =====================
-        # LAG SAFE BASE
+        # 🔥 SPIKE FEATURE (NEW)
         # =====================
-        shifted = base_series.shift(1)
+        rolling_mean_7 = shifted.rolling(7).mean()
+        rolling_std_7 = shifted.rolling(7).std()
+
+        df["is_spike"] = (
+            shifted > (rolling_mean_7 + 1.5 * rolling_std_7)
+        ).astype(int)
+
+        # =====================
+        # DELTA TARGET
+        # =====================
+        df["delta"] = base_series - base_series.shift(1)
 
         # Rolling stats
         df["rolling_mean_7"] = shifted.rolling(7).mean()
