@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Transaction Prediction</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #f4f6f8;
+            text-align: center;
+            padding-top: 60px;
+        }
+
+        .card {
+            background: white;
+            width: 420px;
+            margin: auto;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            color: #2c3e50;
+        }
+
+        .value {
+            margin: 10px 0;
+            font-size: 18px;
+        }
+
+        .highlight {
+            font-size: 24px;
+            color: green;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="card">
+    <h2>📊 Next Day Prediction</h2>
+
+    <div class="value">
+        <b>Date:</b> {{ result.date }}
+    </div>
+
+    <div class="value">
+        <b>Current Transaction:</b><br>
+        {{ result.current }}
+    </div>
+
+    <div class="value">
+        <b>Predicted Delta:</b><br>
+        {{ result.delta }}
+    </div>
+
+    <div class="highlight">
+        Next Day: {{ result.next_day }}
+    </div>
+</div>
+
+</body>
+</html>
