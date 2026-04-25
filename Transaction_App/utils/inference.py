@@ -35,8 +35,8 @@ def predict_next_day(df, model, scaler, features):
     df = df.sort_values("date").reset_index(drop=True)
 
     # Store the last row info BEFORE any processing
-    current_value = df.iloc[-2]["total_txn_current"]
-    current_date = df.iloc[-2]["date"]
+    current_value = df.iloc[-7]["total_txn_current"]
+    current_date = df.iloc[7]["date"]
 
     # =============================
     # FEATURE ENGINEERING (SAME AS TRAINING)
@@ -60,7 +60,7 @@ def predict_next_day(df, model, scaler, features):
     # =============================
     # TAKE LAST ROW (after feature engineering, before preprocessing)
     # =============================
-    X = df.iloc[-2:].copy()
+    X = df.iloc[-7:].copy()
 
     # =============================
     # PREPROCESS (EXACT SAME AS: transform_preprocess from pre_processing.py)
@@ -94,6 +94,6 @@ def predict_next_day(df, model, scaler, features):
     return {
         "date": str(current_date),
         "current": float(current_value),
-        "delta": float(delta),
+        "next_day": float(delta),
         # "next_day": float(next_day)
     }
