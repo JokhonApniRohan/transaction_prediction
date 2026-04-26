@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Transaction Prediction</title>
+    <title>Transaction Prediction Dashboard</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
         * {
@@ -12,173 +14,155 @@
         }
 
         body {
-            background: #f5f7fb;
-            height: 100vh;
+            background: #f4f6fb;
             display: flex;
+            height: 100vh;
             overflow: hidden;
         }
 
-        /* LOGO */
-        .logo {
-            position: absolute;
-            top: 20px;
-            right: 30px;
-            z-index: 10;
+        /* SIDEBAR */
+        .sidebar {
+            width: 80px;
+            background: #0a0f2c;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
         }
 
-        .logo img {
-            height: 100px; /* adjust as needed */
+        .sidebar .logo-box {
+            width: 45px;
+            height: 45px;
+            margin-bottom: 40px;
+        }
+
+        .sidebar .logo-box img {
+            width: 100%;
+            height: 100%;
             object-fit: contain;
         }
 
-        /* LEFT PANEL */
-        .left {
-            width: 42%;
-            background: linear-gradient(135deg, #0000cc, #3b3bff);
-            color: white;
-            padding: 70px 50px;
+        .sidebar .icon {
+            width: 42px;
+            height: 42px;
+            margin: 15px 0;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.06);
+        }
+
+        /* MAIN AREA */
+        .main {
+            flex: 1;
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            position: relative;
-
-            animation: slideLeft 0.8s ease;
         }
 
-        .left::after {
-            content: "";
-            position: absolute;
-            bottom: -100px;
-            right: -100px;
-            width: 300px;
-            height: 300px;
-            background: radial-gradient(circle, #FFD34C, transparent);
-            opacity: 0.25;
+        /* TOP BAR */
+        .topbar {
+            height: 70px;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
 
-        .left h1 {
-            font-size: 36px;
-            font-weight: 700;
-            line-height: 1.2;
-            margin-bottom: 15px;
+        .title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1b1f3a;
         }
 
-        .left p {
-            opacity: 0.85;
-            font-size: 14px;
-            letter-spacing: 0.5px;
+        .subtitle {
+            font-size: 12px;
+            color: #8a94a6;
         }
 
-        /* RIGHT PANEL */
-        .right {
-            width: 58%;
-            padding: 70px 60px;
+        /* CONTENT */
+        .content {
+            flex: 1;
+            display: flex;
+            padding: 25px;
+            gap: 25px;
+        }
+
+        /* LEFT PANEL (cards) */
+        .left-panel {
+            width: 45%;
             display: flex;
             flex-direction: column;
-            justify-content: center;
-
-            background: rgba(255, 255, 255, 0.6);
-            backdrop-filter: blur(10px);
-
-            animation: fadeIn 1s ease;
+            gap: 20px;
         }
 
-        .data-row {
-            margin-bottom: 40px;
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
         }
 
         .label {
             font-size: 11px;
             color: #8a94a6;
-            margin-bottom: 6px;
             text-transform: uppercase;
-            letter-spacing: 1.5px;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
         }
 
         .value {
-            font-size: 28px;
+            font-size: 24px;
             font-weight: 600;
-            color: #0f172a;
-            letter-spacing: -0.5px;
+            color: #1b1f3a;
         }
 
-        /* Prediction Highlight */
-        .prediction {
-            margin-top: 30px;
-            padding: 25px;
-            border-radius: 14px;
+        /* RIGHT PANEL */
+        .right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
 
-            background: linear-gradient(135deg, #ffffff, #f9fbff);
-            box-shadow: 0 15px 40px rgba(0, 0, 204, 0.08);
-
+        /* BIG INSIGHT CARD */
+        .prediction-card {
+            background: linear-gradient(135deg, #0000cc, #3b3bff);
+            color: white;
+            border-radius: 18px;
+            padding: 30px;
             position: relative;
             overflow: hidden;
         }
 
-        .prediction::before {
+        .prediction-card::after {
             content: "";
             position: absolute;
-            left: 0;
-            top: 0;
-            width: 6px;
-            height: 100%;
-            background: #FFD34C;
+            top: -50px;
+            right: -50px;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, #FFD34C, transparent);
+            opacity: 0.3;
         }
 
-        .prediction .label {
-            color: #0000cc;
-        }
-
-        .prediction .value {
+        .prediction-value {
             font-size: 42px;
-            color: #0000cc;
+            font-weight: 700;
+            margin-top: 10px;
         }
 
-        .value span {
-            position: relative;
+        /* IMAGE PANEL (your reference image) */
+        .image-box {
+            background: white;
+            border-radius: 16px;
+            padding: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            overflow: hidden;
         }
 
-        .value span::after {
-            content: "";
-            position: absolute;
-            left: 0;
-            bottom: -6px;
+        .image-box img {
             width: 100%;
-            height: 6px;
-            background: #FFD34C;
-            z-index: -1;
-
-            transform: scaleX(0);
-            transform-origin: left;
-            animation: underline 0.8s ease forwards;
-        }
-
-        .prediction:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 20px 50px rgba(0, 0, 204, 0.12);
-        }
-
-        /* Animations */
-        @keyframes slideLeft {
-            from {
-                transform: translateX(-60px);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes underline {
-            to {
-                transform: scaleX(1);
-            }
+            border-radius: 12px;
         }
 
     </style>
@@ -186,39 +170,76 @@
 
 <body>
 
-    <!-- LOGO (Replace src with your company logo) -->
-    <div class="logo">
-        <img src="static\images.png" alt="Company Logo">
-    </div>
+    <!-- SIDEBAR -->
+    <div class="sidebar">
 
-    <!-- LEFT SIDE -->
-    <div class="left">
-        <h1>Next Day<br>Transaction Prediction</h1>
-        <p>AI-powered transaction forecasting system</p>
-    </div>
-
-    <!-- RIGHT SIDE -->
-    <div class="right">
-
-        <div class="data-row">
-            <div class="label">Yesterday's Date</div>
-            <div class="value"><span>{{ result.date }}</span></div>
+        <!-- LOGO -->
+        <div class="logo-box">
+            <img src="static/images.png" alt="logo">
         </div>
 
-        <div class="data-row">
-            <div class="label">Yesterday's Transaction</div>
-            <div class="value">
-                <span>৳ {{ "{:,.0f}".format(result.current) }}</span>
+        <div class="icon"></div>
+        <div class="icon"></div>
+        <div class="icon"></div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+
+        <!-- TOP BAR -->
+        <div class="topbar">
+            <div>
+                <div class="title">Transaction Prediction Dashboard</div>
+                <div class="subtitle">AI powered forecasting system</div>
             </div>
         </div>
 
-        <div class="prediction">
-            <div class="label">Prediction for the Next Day</div>
-            <div class="value">
-                <span>৳ {{ "{:,.0f}".format(result.next_day) }}</span>
-            </div>
-        </div>
+        <!-- CONTENT -->
+        <div class="content">
 
+            <!-- LEFT -->
+            <div class="left-panel">
+
+                <div class="card">
+                    <div class="label">Date</div>
+                    <div class="value">{{ result.date }}</div>
+                </div>
+
+                <div class="card">
+                    <div class="label">Current Transaction</div>
+                    <div class="value">
+                        ৳ {{ "{:,.0f}".format(result.current) }}
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="label">System Status</div>
+                    <div class="value">Active Model Running</div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT -->
+            <div class="right-panel">
+
+                <div class="prediction-card">
+                    <div class="label" style="color: rgba(255,255,255,0.8);">
+                        Predicted Next Day
+                    </div>
+
+                    <div class="prediction-value">
+                        ৳ {{ "{:,.0f}".format(result.next_day) }}
+                    </div>
+                </div>
+
+                <!-- YOUR REFERENCE IMAGE -->
+                <div class="image-box">
+                    <img src="/mnt/data/image.png" alt="reference dashboard">
+                </div>
+
+            </div>
+
+        </div>
     </div>
 
 </body>

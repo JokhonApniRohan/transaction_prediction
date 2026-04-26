@@ -36,7 +36,7 @@ def predict_next_day(df, model, scaler, features):
 
     # Store the last row info BEFORE any processing
     current_value = df.iloc[-7]["total_txn_current"]
-    current_date = df.iloc[7]["date"]
+    current_date = df.iloc[-7]["date"]
 
     # =============================
     # FEATURE ENGINEERING (SAME AS TRAINING)
