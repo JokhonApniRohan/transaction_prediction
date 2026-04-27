@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from prophet import Prophet
 
 from prophet_feature_engineering import create_prophet_features
@@ -30,50 +31,56 @@ def train_model():
         axis=1
     )
 
+    # Fill NaNs (critical for Prophet stability)
+    df_prophet = df_prophet.fillna(0)
+
     # -----------------------------
-    # PROPhet MODEL
+    # PROPHET MODEL
     # -----------------------------
     model = Prophet(
+
         yearly_seasonality=True,
         weekly_seasonality=True,
         daily_seasonality=False,
-        changepoint_prior_scale=0.1
+
+        changepoint_prior_scale=0.15,
+        changepoint_range=0.85,
+        n_changepoints=40,
+
+        growth="linear",
+
+        seasonality_mode="additive",
+        seasonality_prior_scale=5.0,
+
+        holidays_prior_scale=12.0,
+
+        interval_width=0.9
     )
 
     # -----------------------------
-    # REGRESSORS (STRICT LIST)
+    # REGRESSORS (ONLY FUTURE-SAFE)
     # -----------------------------
     regressors = [
         "is_weekend",
         "is_month_start",
         "is_month_end",
         "is_salary_period",
-        "salary_peak",
-        "salary_mid",
-        "salary_late",
         "is_mid_month",
         "is_end_month_spike",
         "is_payday",
-        "is_payday_15",
-        "is_payday_30",
-        "weekend_payday",
         "campaign_window",
-        "dow_sin",
-        "dow_cos",
-        "month_sin",
-        "month_cos",
-        "dom_sin",
-        "dom_cos"
+
+        # SHOCK PROXIES (SAFE FOR FUTURE)
+        "high_risk_period",
+        "stress_window"
     ]
 
-    # enforce only existing columns
     regressors = [r for r in regressors if r in df_prophet.columns]
+
+    print("Regressors used:", regressors)
 
     for r in regressors:
         model.add_regressor(r)
-
-    # remove any NaNs (critical for Prophet stability)
-    df_prophet = df_prophet.fillna(0)
 
     model.fit(df_prophet)
 
@@ -85,13 +92,13 @@ MODEL, REGRESSORS = train_model()
 
 
 # =====================================================
-# 2. FUTURE FEATURE ENGINEERING (FIXED)
+# 2. FUTURE FEATURE ENGINEERING (SAFE)
 # =====================================================
 def build_future_features(future_df: pd.DataFrame):
 
     df = future_df.copy()
 
-    # IMPORTANT: create required date column format
+    # rename for feature function compatibility
     df = df.rename(columns={"ds": "date"})
 
     features = create_prophet_features(df)
@@ -101,7 +108,7 @@ def build_future_features(future_df: pd.DataFrame):
 
     combined = pd.concat([future_df, features], axis=1)
 
-    # enforce missing regressor safety
+    # ensure all regressors exist
     for col in REGRESSORS:
         if col not in combined.columns:
             combined[col] = 0
@@ -121,7 +128,7 @@ def predict_transaction(start_date, end_date):
 
     future = pd.DataFrame({"ds": future_dates})
 
-    # build regressors
+    # build regressors (future-safe only)
     future = build_future_features(future)
 
     # prediction
