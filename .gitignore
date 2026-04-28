@@ -3,17 +3,19 @@
 # ==============================
 *.csv
 
-# (Optional) keep sample/schema files if needed
+# (Optional) allow specific CSVs
 !sample.csv
 !data_schema.csv
 
 
 # ==============================
-# DATA / MODEL DIRECTORIES
+# DATA / MODEL / APP DIRECTORIES
 # ==============================
 /Datasets/
 /Model/
 /Images/
+/Modules/
+/Transaction_App/
 
 
 # ==============================
@@ -55,21 +57,21 @@ env/
 
 
 # ==============================
-# OS / SYSTEM FILES
+# OS FILES
 # ==============================
 .DS_Store
 Thumbs.db
 
 
 # ==============================
-# IDE / EDITOR
+# IDE SETTINGS
 # ==============================
 .vscode/
 .idea/
 
 
 # ==============================
-# BUILD / CACHE
+# BUILD OUTPUTS
 # ==============================
 dist/
 build/
