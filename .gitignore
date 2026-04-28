@@ -1,6 +1,76 @@
-Datasets
+# ==============================
+# DATA FILES (IGNORE ALL CSV)
+# ==============================
 *.csv
-Transaction_App
-Images
-Model
-Modules
+
+# (Optional) keep sample/schema files if needed
+!sample.csv
+!data_schema.csv
+
+
+# ==============================
+# DATA / MODEL DIRECTORIES
+# ==============================
+/Datasets/
+/Model/
+/Images/
+
+
+# ==============================
+# PYTHON CACHE
+# ==============================
+__pycache__/
+*.py[cod]
+*$py.class
+
+
+# ==============================
+# VIRTUAL ENVIRONMENTS
+# ==============================
+venv/
+env/
+.venv/
+
+
+# ==============================
+# NOTEBOOKS
+# ==============================
+.ipynb_checkpoints/
+
+
+# ==============================
+# LOGS & TEMP FILES
+# ==============================
+*.log
+*.tmp
+
+
+# ==============================
+# MODEL ARTIFACTS (ML)
+# ==============================
+*.pkl
+*.joblib
+*.h5
+*.pt
+
+
+# ==============================
+# OS / SYSTEM FILES
+# ==============================
+.DS_Store
+Thumbs.db
+
+
+# ==============================
+# IDE / EDITOR
+# ==============================
+.vscode/
+.idea/
+
+
+# ==============================
+# BUILD / CACHE
+# ==============================
+dist/
+build/
+*.egg-info/
