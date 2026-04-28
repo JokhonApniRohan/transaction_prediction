@@ -9,6 +9,22 @@ from backend_prophet import predict_transaction
 app = dash.Dash(__name__)
 
 # =====================================================
+# THEME CONSTANTS  (mirrored from reference design)
+# =====================================================
+NAVY   = "#1a3a6b"
+TEAL   = "#0d7a6b"
+GOLD   = "#c8a84b"
+DARK   = "#0f1923"
+DARK2  = "#1c2b3a"
+WHITE  = "#ffffff"
+BG     = "#f0f2f5"
+MUTED  = "#6b7a90"
+GREEN  = "#27ae60"
+RED    = "#e53e3e"
+BORDER = "#dde1ea"
+BLUE   = "#3a9bd5"
+
+# =====================================================
 # GLOBAL CSS
 # =====================================================
 app.index_string = """
@@ -16,58 +32,41 @@ app.index_string = """
 <html>
 <head>
     {%metas%}
-    <title>Txn Forecast</title>
+    <title>Transaction Forecast</title>
     {%favicon%}
     {%css%}
 
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&display=swap" rel="stylesheet">
 
     <style>
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-        --glass:     rgba(255,255,255,0.32);
-        --glass-hvy: rgba(255,255,255,0.58);
-        --glass-bdr: rgba(255,255,255,0.62);
-        --blur:      20px;
-
-        /* Accent colours — saturated enough to pop on the soft bg */
-        --accent:    #1a56db;
-        --accent-lt: rgba(26,86,219,0.11);
-        --green:     #047857;
-        --green-lt:  rgba(4,120,87,0.10);
-        --danger:    #b91c1c;
-        --danger-lt: rgba(185,28,28,0.10);
-        --purple:    #6d28d9;
-        --purple-lt: rgba(109,40,217,0.10);
-
-        /* Text — darker than before so it pops on glass */
-        --text:      #0c1420;
-        --text-sec:  #374151;
-        --muted:     #6b7280;
-
-        --mono:      'JetBrains Mono', monospace;
-        --sans:      'Plus Jakarta Sans', sans-serif;
-        --radius:    18px;
+        --navy:   #1a3a6b;
+        --teal:   #0d7a6b;
+        --gold:   #c8a84b;
+        --dark:   #0f1923;
+        --dark2:  #1c2b3a;
+        --white:  #ffffff;
+        --bg:     #f0f2f5;
+        --muted:  #6b7a90;
+        --green:  #27ae60;
+        --red:    #e53e3e;
+        --border: #dde1ea;
+        --blue:   #3a9bd5;
+        --sans:   'DM Sans', sans-serif;
+        --cond:   'Barlow Condensed', sans-serif;
     }
 
     html, body {
         font-family: var(--sans);
-        /* Slightly deeper gradient so glass panels read clearly */
-        background:
-            linear-gradient(160deg,
-                #dde5f4 0%,
-                #cfdaf0 22%,
-                #dbd5f0 50%,
-                #cce8de 78%,
-                #d8ecda 100%);
-        background-attachment: fixed;
-        color: var(--text);
+        background: var(--bg);
+        color: var(--dark2);
         min-height: 100vh;
     }
 
-    /* ---- SCROLL INDICATOR ---- */
+    /* ── SCROLL INDICATOR ── */
     #scroll-indicator {
         position: fixed;
         bottom: 28px;
@@ -86,7 +85,7 @@ app.index_string = """
     #scroll-indicator.hidden { opacity: 0; }
 
     .scroll-label {
-        font-family: var(--mono);
+        font-family: var(--sans);
         font-size: 9px;
         letter-spacing: 0.18em;
         text-transform: uppercase;
@@ -96,13 +95,13 @@ app.index_string = """
     .scroll-chevron {
         width: 26px; height: 26px;
         border-radius: 50%;
-        background: rgba(255,255,255,0.50);
-        backdrop-filter: blur(8px);
-        border: 1px solid rgba(255,255,255,0.65);
+        background: var(--white);
+        border: 1px solid var(--border);
         display: flex;
         align-items: center;
         justify-content: center;
         animation: bounce 1.8s ease-in-out infinite;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
 
     .scroll-chevron svg {
@@ -119,123 +118,91 @@ app.index_string = """
         50%       { transform: translateY(4px); }
     }
 
-    /* ---- LAYOUT SHELL ---- */
-    #root-wrap {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 44px 28px 100px;
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-    }
-
-    /* ---- GLASS BASE ---- */
-    .glass {
-        background: var(--glass);
-        backdrop-filter: blur(var(--blur));
-        -webkit-backdrop-filter: blur(var(--blur));
-        border: 1px solid var(--glass-bdr);
-        border-radius: var(--radius);
-        box-shadow:
-            0 2px 8px rgba(12,20,32,0.06),
-            0 8px 28px rgba(12,20,32,0.07),
-            inset 0 1px 0 rgba(255,255,255,0.70);
-    }
-
-    .glass-heavy {
-        background: var(--glass-hvy);
-        backdrop-filter: blur(var(--blur));
-        -webkit-backdrop-filter: blur(var(--blur));
-        border: 1px solid var(--glass-bdr);
-        border-radius: var(--radius);
-        box-shadow:
-            0 2px 8px rgba(12,20,32,0.07),
-            0 8px 28px rgba(12,20,32,0.09),
-            inset 0 1px 0 rgba(255,255,255,0.80);
-    }
-
-    /* ---- HEADER ---- */
-    .header-row {
+    /* ── TOP NAV BAR ── */
+    #top-nav {
+        background: var(--dark);
+        padding: 11px 28px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 22px 28px;
     }
 
-    .header-title {
-        font-size: 26px;
-        font-weight: 800;
-        letter-spacing: -0.5px;
-        color: var(--text);
-        line-height: 1;
+    .nav-title {
+        font-family: var(--cond);
+        font-weight: 700;
+        font-size: 22px;
+        color: var(--white);
+        letter-spacing: 0.5px;
     }
 
-    .header-sub {
-        font-family: var(--mono);
+    .nav-subtitle {
+        color: var(--gold);
+        font-size: 11px;
+        margin-left: 10px;
+        font-family: var(--sans);
+    }
+
+    .nav-ts {
         font-size: 10px;
-        color: var(--muted);
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        margin-top: 5px;
-        font-weight: 400;
+        color: rgba(255,255,255,0.4);
+        font-style: italic;
+        font-family: var(--sans);
     }
 
-    .header-badge {
-        font-family: var(--mono);
-        font-size: 9px;
-        background: rgba(12,20,32,0.08);
-        color: var(--text-sec);
-        padding: 5px 14px;
-        border-radius: 50px;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        font-weight: 500;
-        border: 1px solid rgba(12,20,32,0.12);
+    /* ── LAYOUT SHELL ── */
+    #root-wrap {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 24px 28px 80px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
     }
 
-    /* ---- CONTROLS STRIP ---- */
-    .controls-strip {
+    /* ── FILTER CARD ── */
+    .filter-card {
+        background: var(--white);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 16px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
         display: flex;
         align-items: flex-end;
         gap: 20px;
-        padding: 18px 22px;
-        position: relative;
-        z-index: 200;
     }
 
     .ctrl-group {
         display: flex;
         flex-direction: column;
-        gap: 5px;
+        gap: 4px;
         position: relative;
         z-index: 200;
     }
 
     .ctrl-label {
-        font-family: var(--mono);
-        font-size: 9px;
-        letter-spacing: 0.12em;
+        font-family: var(--sans);
+        font-size: 8px;
+        font-weight: 700;
+        color: var(--muted);
+        letter-spacing: 1.5px;
         text-transform: uppercase;
-        color: var(--text-sec);
-        font-weight: 500;
     }
 
     /* Date picker overrides */
     .SingleDatePickerInput {
-        border: 1px solid rgba(12,20,32,0.14) !important;
-        border-radius: 10px !important;
-        background: rgba(255,255,255,0.55) !important;
-        backdrop-filter: blur(8px) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 6px !important;
+        background: var(--white) !important;
     }
 
     .DateInput_input {
-        font-family: var(--mono) !important;
-        font-size: 12px !important;
-        font-weight: 500 !important;
-        color: var(--text) !important;
+        font-family: var(--sans) !important;
+        font-size: 13px !important;
+        font-weight: 400 !important;
+        color: var(--dark2) !important;
         background: transparent !important;
         border-bottom: none !important;
-        padding: 7px 11px !important;
+        padding: 7px 10px !important;
     }
 
     .SingleDatePicker_picker,
@@ -248,145 +215,141 @@ app.index_string = """
     .ctrl-sep {
         width: 1px;
         height: 32px;
-        background: rgba(12,20,32,0.12);
+        background: var(--border);
         align-self: flex-end;
         margin-bottom: 2px;
     }
 
     .run-btn {
-        font-family: var(--sans);
+        font-family: var(--cond);
         font-weight: 700;
         font-size: 12px;
-        letter-spacing: 0.02em;
-        background: var(--text);
-        color: #f0f4ff;
-        border: 1px solid rgba(255,255,255,0.10);
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        background: var(--navy);
+        color: var(--white);
+        border: none;
         padding: 9px 22px;
-        border-radius: 50px;
+        border-radius: 6px;
         cursor: pointer;
-        transition: all 0.18s;
+        transition: all 0.15s;
         white-space: nowrap;
         margin-left: auto;
-        box-shadow: 0 2px 14px rgba(12,20,32,0.22);
+        box-shadow: 0 2px 8px rgba(26,58,107,0.18);
     }
 
-    .run-btn:hover  { opacity: 0.85; transform: translateY(-1px); }
+    .run-btn:hover  { background: #142e58; transform: translateY(-1px); }
     .run-btn:active { transform: scale(0.97); }
 
-    /* ---- KPI ROW ---- */
+    /* ── KPI ROW ── */
     .kpi-row {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
         gap: 14px;
-        position: relative;
-        z-index: 1;
     }
 
+    /* ── KPI CARD  (left-border tile, matches reference exactly) ── */
     .kpi-card {
-        padding: 20px 22px;
+        background: var(--white);
+        border-radius: 10px;
+        border-left: 4px solid var(--navy);
+        border-top: none;
+        border-right: none;
+        border-bottom: none;
+        padding: 14px 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
         position: relative;
-        overflow: hidden;
-        z-index: 1;
     }
 
-    /* Coloured left border stripe */
-    .kpi-card::before {
-        content: '';
-        position: absolute;
-        top: 16px; bottom: 16px; left: 0;
-        width: 3px;
-        border-radius: 0 2px 2px 0;
-        background: var(--accent);
-    }
-
-    .kpi-card.kpi-max::before { background: var(--green); }
-    .kpi-card.kpi-min::before { background: var(--danger); }
-    .kpi-card.kpi-avg::before { background: var(--purple); }
-
-    .kpi-dot {
-        width: 7px; height: 7px;
-        border-radius: 50%;
-        background: var(--accent);
-        margin-bottom: 10px;
-        box-shadow: 0 0 0 3px var(--accent-lt);
-    }
-
-    .kpi-card.kpi-max .kpi-dot { background: var(--green);  box-shadow: 0 0 0 3px var(--green-lt); }
-    .kpi-card.kpi-min .kpi-dot { background: var(--danger); box-shadow: 0 0 0 3px var(--danger-lt); }
-    .kpi-card.kpi-avg .kpi-dot { background: var(--purple); box-shadow: 0 0 0 3px var(--purple-lt); }
+    .kpi-card.kpi-max { border-left-color: var(--teal); }
+    .kpi-card.kpi-min { border-left-color: var(--red);  }
+    .kpi-card.kpi-avg { border-left-color: var(--gold); }
 
     .kpi-label {
-        font-family: var(--mono);
+        font-family: var(--sans);
         font-size: 9px;
-        letter-spacing: 0.13em;
-        text-transform: uppercase;
+        font-weight: 600;
         color: var(--muted);
-        margin-bottom: 6px;
-        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 4px;
     }
 
     .kpi-value {
-        font-family: var(--sans);
-        font-size: 26px;
+        font-family: var(--cond);
+        font-size: 28px;
         font-weight: 800;
-        letter-spacing: -0.5px;
-        line-height: 1;
-        color: var(--text);
+        color: var(--dark2);
+        line-height: 1.1;
+        letter-spacing: 0.2px;
     }
 
     .kpi-sub {
-        font-family: var(--mono);
-        font-size: 10px;
+        font-family: var(--sans);
+        font-size: 11px;
         color: var(--muted);
-        margin-top: 5px;
-        font-weight: 400;
+        margin-top: 2px;
     }
 
-    /* ---- CHART PANEL ---- */
+    /* ── CHART PANEL ── */
     .chart-panel {
-        padding: 22px;
-        position: relative;
-        z-index: 1;
+        background: var(--white);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 4px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     }
 
     .panel-title {
-        font-family: var(--mono);
-        font-size: 9px;
-        letter-spacing: 0.14em;
+        font-family: var(--cond);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 2px;
         text-transform: uppercase;
-        color: var(--text-sec);
-        margin-bottom: 14px;
-        font-weight: 500;
+        color: var(--dark2);
+        padding: 12px 16px 0;
     }
 
-    /* ---- BOTTOM ROW ---- */
+    /* ── BOTTOM ROW ── */
     .bottom-row {
         display: grid;
-        grid-template-columns: 1fr 360px;
+        grid-template-columns: 1fr 340px;
         gap: 14px;
         align-items: start;
-        position: relative;
-        z-index: 1;
     }
 
-    /* ---- TABLE PANEL ---- */
-    .table-panel { overflow: hidden; }
+    /* ── TABLE PANEL  (navy-header section_card) ── */
+    .table-panel {
+        background: var(--white);
+        border-radius: 10px;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        overflow: hidden;
+    }
 
     .table-header-row {
+        background: var(--navy);
+        padding: 10px 16px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 14px 18px;
-        border-bottom: 1px solid rgba(12,20,32,0.09);
     }
 
-    .table-header-row .panel-title { margin: 0; }
+    .table-header-row .panel-title {
+        font-family: var(--cond);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--white);
+        padding: 0;
+        margin: 0;
+    }
 
     .table-count {
-        font-family: var(--mono);
-        font-size: 9px;
-        color: var(--muted);
-        font-weight: 500;
+        font-family: var(--sans);
+        font-size: 10px;
+        color: rgba(255,255,255,0.55);
     }
 
     .scroll-box {
@@ -395,48 +358,58 @@ app.index_string = """
     }
 
     .scroll-box::-webkit-scrollbar { width: 4px; }
-    .scroll-box::-webkit-scrollbar-track { background: transparent; }
-    .scroll-box::-webkit-scrollbar-thumb { background: rgba(12,20,32,0.14); border-radius: 2px; }
+    .scroll-box::-webkit-scrollbar-track { background: #fafbfc; }
+    .scroll-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
     table {
         width: 100%;
         border-collapse: collapse;
-        font-family: var(--mono);
+        font-family: var(--sans);
         font-size: 12px;
     }
 
-    thead tr { border-bottom: 1px solid rgba(12,20,32,0.09); }
+    thead tr { background: var(--navy); }
 
     th {
-        padding: 9px 18px;
+        padding: 9px 14px;
         text-align: left;
-        font-size: 9px;
-        letter-spacing: 0.12em;
+        font-size: 11px;
+        letter-spacing: 0.8px;
         text-transform: uppercase;
-        color: var(--text-sec);
+        color: var(--white);
+        font-family: var(--cond);
         font-weight: 600;
         position: sticky;
         top: 0;
-        background: rgba(255,255,255,0.62);
-        backdrop-filter: blur(10px);
+        background: var(--navy);
         z-index: 2;
+        border: none;
     }
 
     td {
-        padding: 9px 18px;
-        border-bottom: 1px solid rgba(12,20,32,0.05);
-        color: var(--text);
+        padding: 8px 14px;
+        border-bottom: 1px solid #f0f2f5;
+        color: var(--dark2);
         font-weight: 400;
+        font-size: 12px;
     }
 
-    tbody tr:last-child td { border-bottom: none; }
-    tbody tr:hover { background: rgba(255,255,255,0.35); }
+    tbody tr:nth-child(odd)  { background: #fafbfc; }
+    tbody tr:nth-child(even) { background: var(--white); }
+    tbody tr:hover           { background: #f0f5ff; }
+    tbody tr:last-child td   { border-bottom: none; }
 
-    td:nth-child(2) { font-weight: 600; text-align: right; color: var(--text); }
+    td:nth-child(2) { font-weight: 500; text-align: right; }
     th:nth-child(2) { text-align: right; }
 
-    /* ---- PIE PANEL ---- */
-    .pie-panel { padding: 18px; }
+    /* ── PIE PANEL ── */
+    .pie-panel {
+        background: var(--white);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 4px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
 
     </style>
 
@@ -460,6 +433,7 @@ app.index_string = """
 </head>
 <body>
 
+    <!-- SCROLL INDICATOR -->
     <div id="scroll-indicator">
         <span class="scroll-label">Scroll</span>
         <div class="scroll-chevron">
@@ -483,72 +457,82 @@ app.index_string = """
 # =====================================================
 # LAYOUT
 # =====================================================
-app.layout = html.Div(id="root-wrap", children=[
+app.layout = html.Div(children=[
 
-    # HEADER
-    html.Div(className="glass-heavy header-row", children=[
+    # TOP NAV BAR
+    html.Div(id="top-nav", children=[
         html.Div([
-            html.Div("Transaction Forecast", className="header-title"),
-            html.Div("Prophet-based forecasting engine", className="header-sub"),
+            html.Span("Transaction Forecast", className="nav-title"),
+            html.Span("|  Analytics", className="nav-subtitle"),
         ]),
-        html.Div("Prophet Model", className="header-badge")
+        html.Div("Prophet-based forecasting engine", className="nav-ts"),
     ]),
 
-    # CONTROLS STRIP
-    html.Div(className="glass controls-strip", children=[
+    # PAGE BODY
+    html.Div(id="root-wrap", children=[
 
-        html.Div(className="ctrl-group", children=[
-            html.Label("Start Date", className="ctrl-label"),
-            dcc.DatePickerSingle(id="start-date", display_format="YYYY-MM-DD")
-        ]),
+        # FILTER CARD
+        html.Div(className="filter-card", children=[
 
-        html.Div(className="ctrl-sep"),
-
-        html.Div(className="ctrl-group", children=[
-            html.Label("End Date", className="ctrl-label"),
-            dcc.DatePickerSingle(id="end-date", display_format="YYYY-MM-DD")
-        ]),
-
-        html.Button("Run Forecast →", id="predict-btn", className="run-btn")
-
-    ]),
-
-    # KPI CARDS
-    html.Div(className="kpi-row", children=[
-        html.Div(id="total-output", className="glass kpi-card"),
-        html.Div(id="max-output",   className="glass kpi-card kpi-max"),
-        html.Div(id="min-output",   className="glass kpi-card kpi-min"),
-        html.Div(id="avg-output",   className="glass kpi-card kpi-avg"),
-    ]),
-
-    # CHART
-    html.Div(className="glass chart-panel", children=[
-        html.Div("Daily Transaction Forecast", className="panel-title"),
-        dcc.Graph(id="forecast-graph", style={"height": "400px"},
-                  config={"displayModeBar": False})
-    ]),
-
-    # BOTTOM ROW: TABLE + PIE
-    html.Div(className="bottom-row", children=[
-
-        html.Div(className="glass table-panel", children=[
-            html.Div(className="table-header-row", children=[
-                html.Div("Daily Breakdown", className="panel-title"),
-                html.Div(id="table-count", className="table-count")
+            html.Div(className="ctrl-group", children=[
+                html.Label("Start Date", className="ctrl-label"),
+                dcc.DatePickerSingle(id="start-date", display_format="YYYY-MM-DD"),
             ]),
-            html.Div(className="scroll-box", children=[
-                html.Table(id="forecast-table")
-            ])
+
+            html.Div(className="ctrl-sep"),
+
+            html.Div(className="ctrl-group", children=[
+                html.Label("End Date", className="ctrl-label"),
+                dcc.DatePickerSingle(id="end-date", display_format="YYYY-MM-DD"),
+            ]),
+
+            html.Button("Run Forecast →", id="predict-btn", className="run-btn"),
         ]),
 
-        html.Div(className="glass pie-panel", children=[
-            html.Div("Transaction Share by Day", className="panel-title"),
-            dcc.Graph(id="pie-chart", style={"height": "300px"},
-                      config={"displayModeBar": False})
-        ])
+        # KPI CARDS
+        html.Div(className="kpi-row", children=[
+            html.Div(id="total-output", className="kpi-card"),
+            html.Div(id="max-output",   className="kpi-card kpi-max"),
+            html.Div(id="min-output",   className="kpi-card kpi-min"),
+            html.Div(id="avg-output",   className="kpi-card kpi-avg"),
+        ]),
 
-    ])
+        # MAIN CHART
+        html.Div(className="chart-panel", children=[
+            html.Div("Daily Transaction Forecast", className="panel-title"),
+            dcc.Graph(
+                id="forecast-graph",
+                style={"height": "380px"},
+                config={"displayModeBar": False, "responsive": True},
+            ),
+        ]),
 
+        # BOTTOM ROW: TABLE + PIE
+        html.Div(className="bottom-row", children=[
+
+            # TABLE
+            html.Div(className="table-panel", children=[
+                html.Div(className="table-header-row", children=[
+                    html.Div("Daily Breakdown", className="panel-title"),
+                    html.Div(id="table-count", className="table-count"),
+                ]),
+                html.Div(className="scroll-box", children=[
+                    html.Table(id="forecast-table"),
+                ]),
+            ]),
+
+            # PIE CHART
+            html.Div(className="pie-panel", children=[
+                html.Div("Transaction Share by Day", className="panel-title"),
+                dcc.Graph(
+                    id="pie-chart",
+                    style={"height": "300px"},
+                    config={"displayModeBar": False},
+                ),
+            ]),
+
+        ]),
+    ]),
 ])
 
 
@@ -564,22 +548,28 @@ app.layout = html.Div(id="root-wrap", children=[
     Output("forecast-table",  "children"),
     Output("table-count",     "children"),
     Output("pie-chart",       "figure"),
-    Input("predict-btn",  "n_clicks"),
-    State("start-date",   "date"),
-    State("end-date",     "date")
+    Input("predict-btn",      "n_clicks"),
+    State("start-date",       "date"),
+    State("end-date",         "date"),
 )
 def update(n_clicks, start, end):
 
-    T = "rgba(0,0,0,0)"
-
     EMPTY = go.Figure(layout=go.Layout(
-        paper_bgcolor=T, plot_bgcolor=T,
-        margin=dict(l=0, r=0, t=0, b=0),
-        xaxis=dict(visible=False), yaxis=dict(visible=False)
+        paper_bgcolor=WHITE, plot_bgcolor=WHITE,
+        margin=dict(l=10, r=10, t=10, b=10),
+        xaxis=dict(visible=False), yaxis=dict(visible=False),
+        annotations=[dict(
+            text="Select a date range and click Run Forecast",
+            x=0.5, y=0.5, showarrow=False,
+            font=dict(color=MUTED, size=13, family="DM Sans"),
+        )],
     ))
 
     if not n_clicks or not start or not end:
-        return EMPTY, "", "", "", "", "", "", EMPTY
+        return EMPTY, "", "", "", "", "", "", go.Figure(layout=go.Layout(
+            paper_bgcolor=WHITE, plot_bgcolor=WHITE,
+            margin=dict(l=0, r=0, t=0, b=0),
+        ))
 
     df = predict_transaction(start, end)
 
@@ -587,161 +577,147 @@ def update(n_clicks, start, end):
     avg     = df["y"].mean()
     max_row = df.loc[df["y"].idxmax()]
     min_row = df.loc[df["y"].idxmin()]
+    n       = len(df)
 
-    MONO  = "JetBrains Mono, monospace"
-    SANS  = "Plus Jakarta Sans, sans-serif"
-    TEXT  = "#0c1420"
-    SEC   = "#374151"
-    MUTED = "#6b7280"
+    SANS = "DM Sans, sans-serif"
+    COND = "Barlow Condensed, sans-serif"
 
-    # ── LINE + BAR CHART ────────────────────────────────
+    # ── MAIN CHART ──────────────────────────────────────────────────────────
     fig = go.Figure()
 
-    # Bar: accent fill, visible but not overwhelming
+    # Bar (volume backdrop)
     fig.add_trace(go.Bar(
         x=df["ds"], y=df["y"],
         name="Volume",
         marker=dict(
-            color="rgba(26,86,219,0.13)",
-            line=dict(color="rgba(26,86,219,0.30)", width=1)
+            color="rgba(26,58,107,0.10)",
+            line=dict(color="rgba(26,58,107,0.22)", width=1),
         ),
-        hovertemplate="<b>%{x|%b %d, %Y}</b><br>Transactions: %{y:,.0f}<extra></extra>"
+        hovertemplate="<b>%{x|%b %d, %Y}</b><br>Transactions: %{y:,.0f}<extra></extra>",
     ))
 
-    # Trend line: deep navy so it reads clearly
+    # Trend line — teal to match reference accent
     fig.add_trace(go.Scatter(
         x=df["ds"], y=df["y"],
         mode="lines+markers",
         name="Trend",
-        line=dict(color="#1a3a8f", width=2.5),
-        marker=dict(
-            color="#1a56db", size=6,
-            line=dict(color="#ffffff", width=2)
-        ),
-        hovertemplate="<b>%{x|%b %d, %Y}</b><br>%{y:,.0f}<extra></extra>"
+        line=dict(color=TEAL, width=2.5),
+        marker=dict(color=WHITE, size=7, line=dict(color=TEAL, width=2.5)),
+        hovertemplate="<b>%{x|%b %d, %Y}</b><br>%{y:,.0f}<extra></extra>",
     ))
 
     fig.update_layout(
-        paper_bgcolor=T,
-        plot_bgcolor=T,
-        margin=dict(l=4, r=4, t=10, b=4),
-        font=dict(family=MONO, size=10, color=SEC),
+        paper_bgcolor=WHITE,
+        plot_bgcolor=WHITE,
+        height=380,
+        margin=dict(l=10, r=16, t=44, b=56),
+        font=dict(family=SANS, size=9, color=MUTED),
         legend=dict(
             orientation="h", y=1.10, x=0,
-            font=dict(size=10, family=MONO, color=SEC),
+            font=dict(size=9, family=SANS, color=DARK2),
             bgcolor="rgba(0,0,0,0)",
-            bordercolor="rgba(0,0,0,0)"
         ),
         xaxis=dict(
             showgrid=False, zeroline=False,
             tickformat="%b %d",
-            tickfont=dict(size=10, color=MUTED),
-            linecolor="rgba(12,20,32,0.12)", linewidth=1,
+            tickfont=dict(size=9, color=MUTED, family=SANS),
+            tickangle=-30,
+            linecolor=BORDER, linewidth=1,
             ticks="outside", ticklen=4,
-            title=None
+            title=None,
         ),
         yaxis=dict(
             showgrid=True, zeroline=False,
-            gridcolor="rgba(12,20,32,0.07)", gridwidth=1,
+            gridcolor="#f0f2f5", gridwidth=1,
             tickformat=",",
-            tickfont=dict(size=10, color=MUTED),
-            title=None
+            tickfont=dict(size=9, color=MUTED, family=SANS),
+            title=None,
         ),
         hovermode="x unified",
         hoverlabel=dict(
-            bgcolor="rgba(255,255,255,0.94)",
-            bordercolor="rgba(12,20,32,0.14)",
-            font=dict(family=MONO, size=11, color=TEXT)
+            bgcolor=WHITE,
+            bordercolor=BORDER,
+            font=dict(family=SANS, size=11, color=DARK2),
         ),
-        bargap=0.30
+        bargap=0.30,
+        showlegend=True,
     )
 
-    # ── PIE CHART ───────────────────────────────────────
-    n = len(df)
+    # ── PIE CHART ───────────────────────────────────────────────────────────
     labels = [str(r["ds"].date()) for _, r in df.iterrows()]
     values = df["y"].tolist()
 
-    # Well-separated, saturated palette — distinct on glass bg
     palette = [
-        "#1a56db",  # blue
-        "#047857",  # emerald
-        "#6d28d9",  # violet
-        "#b45309",  # amber
-        "#0e7490",  # cyan
-        "#be185d",  # rose
-        "#1e40af",  # indigo
-        "#065f46",  # dark green
-        "#92400e",  # brown
-        "#7c3aed",  # purple
-        "#0f766e",  # teal
-        "#9f1239",  # crimson
+        NAVY,    # #1a3a6b
+        TEAL,    # #0d7a6b
+        "#9b59b6",
+        "#e07b39",
+        BLUE,    # #3a9bd5
+        "#c0392b",
+        "#16a085",
+        "#2176ae",
+        GOLD,    # #c8a84b
+        "#1d9e75",
+        "#7c5cbf",
+        "#d35400",
     ]
     colors = [palette[i % len(palette)] for i in range(n)]
 
     pie_fig = go.Figure(go.Pie(
         labels=labels,
         values=values,
-        hole=0.54,
+        hole=0.52,
         marker=dict(
             colors=colors,
-            line=dict(color="rgba(255,255,255,0.85)", width=2.5)
+            line=dict(color=WHITE, width=2.5),
         ),
         textinfo="none",
-        hovertemplate="<b>%{label}</b><br>%{value:,.0f} txns  ·  %{percent}<extra></extra>"
+        hovertemplate="<b>%{label}</b><br>%{value:,.0f} txns  ·  %{percent}<extra></extra>",
     ))
 
     pie_fig.update_layout(
-        paper_bgcolor=T,
-        plot_bgcolor=T,
-        margin=dict(l=0, r=0, t=0, b=0),
+        paper_bgcolor=WHITE,
+        plot_bgcolor=WHITE,
+        margin=dict(l=10, r=10, t=10, b=10),
         showlegend=False,
         hoverlabel=dict(
-            bgcolor="rgba(255,255,255,0.94)",
-            bordercolor="rgba(12,20,32,0.14)",
-            font=dict(family=MONO, size=11, color=TEXT)
-        )
+            bgcolor=WHITE, bordercolor=BORDER,
+            font=dict(family=SANS, size=11, color=DARK2),
+        ),
     )
 
-    # ── KPI CONTENT ─────────────────────────────────────
-    dot = lambda: html.Div(className="kpi-dot")
+    # ── KPI CARDS ────────────────────────────────────────────────────────────
+    def kpi(label, value, sub):
+        return [
+            html.P(label, className="kpi-label"),
+            html.Div(value, className="kpi-value"),
+            html.Div(sub, className="kpi-sub"),
+        ]
 
-    total_content = [
-        dot(),
-        html.Div("Total Transactions", className="kpi-label"),
-        html.Div(f"{int(total):,}", className="kpi-value"),
-        html.Div(f"{n} day period", className="kpi-sub"),
-    ]
-    max_content = [
-        dot(),
-        html.Div("Peak Day", className="kpi-label"),
-        html.Div(f"{int(max_row['y']):,}", className="kpi-value"),
-        html.Div(str(max_row["ds"].date()), className="kpi-sub"),
-    ]
-    min_content = [
-        dot(),
-        html.Div("Lowest Day", className="kpi-label"),
-        html.Div(f"{int(min_row['y']):,}", className="kpi-value"),
-        html.Div(str(min_row["ds"].date()), className="kpi-sub"),
-    ]
-    avg_content = [
-        dot(),
-        html.Div("Daily Average", className="kpi-label"),
-        html.Div(f"{int(avg):,}", className="kpi-value"),
-        html.Div("per day avg", className="kpi-sub"),
-    ]
+    total_content = kpi("Total Transactions", f"{int(total):,}", f"{n} day period")
+    max_content   = kpi("Peak Day",           f"{int(max_row['y']):,}", str(max_row["ds"].date()))
+    min_content   = kpi("Lowest Day",         f"{int(min_row['y']):,}", str(min_row["ds"].date()))
+    avg_content   = kpi("Daily Average",      f"{int(avg):,}", "per day avg")
 
-    # ── TABLE ────────────────────────────────────────────
-    thead = html.Thead(html.Tr([html.Th("Date"), html.Th("Predicted")]))
+    # ── TABLE ─────────────────────────────────────────────────────────────────
+    thead = html.Thead(html.Tr([
+        html.Th("Date"),
+        html.Th("Predicted Transactions"),
+    ]))
     tbody = html.Tbody([
         html.Tr([
             html.Td(str(row["ds"].date())),
-            html.Td(f"{int(row['y']):,}")
+            html.Td(f"{int(row['y']):,}"),
         ])
         for _, row in df.iterrows()
     ])
 
-    return (fig, total_content, max_content, min_content,
-            avg_content, [thead, tbody], f"{n} rows", pie_fig)
+    return (
+        fig,
+        total_content, max_content, min_content, avg_content,
+        [thead, tbody], f"{n} rows",
+        pie_fig,
+    )
 
 
 # =====================================================

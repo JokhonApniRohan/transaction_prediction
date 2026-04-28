@@ -6,11 +6,36 @@ from prophet_feature_engineering import create_prophet_features
 
 
 # =====================================================
+# FORMATTER: INDIAN NUMBER SYSTEM (CRORE/LAKH)
+# =====================================================
+def format_indian_number(x):
+    x = int(round(x))
+    s = str(x)
+
+    if len(s) <= 3:
+        return s
+
+    last3 = s[-3:]
+    rest = s[:-3]
+
+    rest = list(rest)
+    rest.reverse()
+
+    parts = []
+    for i in range(0, len(rest), 2):
+        parts.append("".join(rest[i:i+2]))
+
+    formatted = ",".join(p[::-1] for p in parts[::-1])
+
+    return formatted + "," + last3
+
+
+# =====================================================
 # 1. TRAIN MODEL (RUN ON STARTUP)
 # =====================================================
 def train_model():
 
-    df = pd.read_csv("../Datasets/new_transaction_data.csv")
+    df = pd.read_csv("../Datasets/Rohan.csv")
     df["date"] = pd.to_datetime(df["date"])
 
     # -----------------------------
@@ -69,6 +94,7 @@ def train_model():
         "is_end_month_spike",
         "is_payday",
         "campaign_window",
+        "festival_flag",
 
         # SHOCK PROXIES (SAFE FOR FUTURE)
         "high_risk_period",
@@ -135,6 +161,13 @@ def predict_transaction(start_date, end_date):
     forecast = MODEL.predict(future)
 
     result = forecast[["ds", "yhat"]].copy()
-    result = result.rename(columns={"yhat": "y"})
+
+    # Keep numeric values (for charts/calculations)
+    result["y"] = result["yhat"]
+
+    # Add formatted values (for UI display)
+    result["y_formatted"] = result["y"].apply(format_indian_number)
+
+    result = result.drop(columns=["yhat"])
 
     return result
